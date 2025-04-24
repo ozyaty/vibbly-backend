@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+ffrom fastapi import FastAPI
 from api.routes import router
 import uvicorn
 
 app = FastAPI()
+
+app.include_router(router)
 
 @app.get("/")
 def read_root():
