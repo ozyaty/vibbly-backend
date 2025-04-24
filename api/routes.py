@@ -18,3 +18,16 @@ async def authenticate_user(request: Request):
 @router.get("/feed")
 async def get_feed():
     return {"feed": []}
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+router = APIRouter()
+
+class User(BaseModel):
+    username: str
+    password: str
+
+@router.post("/register")
+def register(user: User):
+    print(f"Received registration for: {user.username}")
+    return {"message": f"User {user.username} registered successfully"}
