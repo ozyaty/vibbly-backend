@@ -1,10 +1,12 @@
 from fastapi import FastAPI
-from api.routes import router
+import uvicorn
 
 app = FastAPI()
 
 @app.get("/")
-def root():
-    return {"message": "Welcome to Telegram Social App"}
+def read_root():
+    return {"message": "Welcome to Vibbly Backend!"}
 
-app.include_router(router)
+# This is crucial for Railway:
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
