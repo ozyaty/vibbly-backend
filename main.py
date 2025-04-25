@@ -4,27 +4,21 @@ from api.routes import router
 
 app = FastAPI()
 
-# Add allowed origins (localhost and production)
-origins = [
-    "http://localhost:5173",             # for local dev
-    "https://vibbly-frontend.vercel.app" # your production frontend
-]
-
+# ✅ Temporarily allow all origins for testing — change later to origins list
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,         # Allow these origins
+    allow_origins=["*"],  # 🚨 Allow any origin (for CORS debugging only!)
     allow_credentials=True,
-    allow_methods=["*"],           # Allow all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],           # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+# ✅ Include your routes
 app.include_router(router)
 
+# ✅ Simple root endpoint for testing
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Vibbly Backend!"}
 
-# For Railway deployment
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000)
+# ⚠️ REMOVE uvicorn.run() block for Railway — it's not needed and breaks deployment
