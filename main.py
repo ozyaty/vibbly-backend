@@ -4,21 +4,21 @@ from api.routes import router
 
 app = FastAPI()
 
-# ✅ Temporarily allow all origins for testing — change later to origins list
+# ✅ Allow only your frontend for credentials (required by Telegram WebApp)
+origins = [
+    "https://vibbly-frontend.vercel.app"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 🚨 Allow any origin (for CORS debugging only!)
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Include your routes
 app.include_router(router)
 
-# ✅ Simple root endpoint for testing
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Vibbly Backend!"}
-
-# ⚠️ REMOVE uvicorn.run() block for Railway — it's not needed and breaks deployment
