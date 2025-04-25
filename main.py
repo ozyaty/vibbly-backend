@@ -4,9 +4,14 @@ from api.routes import router
 
 app = FastAPI()
 
+origins = [
+    "http://localhost:5173",             # for local dev
+    "https://vibbly-frontend.vercel.app" # production frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://vibbly-frontend.vercel.app"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -17,3 +22,7 @@ app.include_router(router)
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Vibbly Backend!"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
