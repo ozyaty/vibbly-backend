@@ -1,36 +1,41 @@
 import os
 import hmac
 import hashlib
+from urllib.parse import unquote
 from fastapi import HTTPException
-from urllib.parse import parse_qsl, unquote_plus
 
+# ✅ Load your bot token from environment (make sure it's set in Railway)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN environment variable is not set!")
+    raise RuntimeError("BOT_TOKEN not set in environment!")
 
+# ✅ Derive secret key
 SECRET_KEY = hashlib.sha256(BOT_TOKEN.encode()).digest()
 
 def check_telegram_auth(init_data: str) -> dict:
-    # Decode and parse init_data
-    init_data = unquote_plus(init_data)
-    parsed = dict(parse_qsl(init_data))
-    received_hash = parsed.pop("hash", None)
+    """
+    Validates Telegram Web App initData using HMAC-SHA256.
+    """
+    try:
+        init_data = unquote(init_data)  # Important: URL-decode it
+        pairs = [s.split("=", 1) for s in init_data.split("&")]
+        data_dict = dict(pairs)
 
-    if not received_hash:
-        raise HTTPException(status_code=400, detail="Missing hash")
+        received_hash = data_dict.pop("hash", None)
+        if not received_hash:
+            raise HTTPException(status_code=400, detail="Missing hash")
 
-    # Build check string
-    data_check_arr = [f"{k}={v}" for k, v in sorted(parsed.items())]
-    data_check_string = "\n".join(data_check_arr)
+        # Build check_string in key=value\nkey=value... format
+        check_arr = [f"{k}={v}" for k, v in sorted(data_dict.items())]
+        check_string = "\n".join(check_arr)
 
-    # Calculate HMAC SHA256
-    computed_hash = hmac.new(SECRET_KEY, data_check_string.encode(), hashlib.sha256).hexdigest()
+        computed_hash = hmac.new(
+            SECRET_KEY, msg=check_string.encode(), digestmod=hashlib.sha256
+        ).hexdigest()
 
-    if computed_hash != received_hash:
-        raise HTTPException(status_code=400, detail="400: Invalid hash")
+        if computed_hash != received_hash:
+            raise HTTPException(status_code=400, detail="Invalid hash")
 
-    # Decode the nested "user" JSON
-    import json
-    user_data = json.loads(parsed["user"])
-
-    return user_data
+        return data_dict
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Hash validation error: {str(e)}")
