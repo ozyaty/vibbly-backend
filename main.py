@@ -1,24 +1,27 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
-import uvicorn
-
 
 app = FastAPI()
+
+# 👇 Add this CORS block:
 origins = [
-    "http://localhost:5173",  # local dev
-    "https://vibbly-frontend.vercel.app"  # production frontend
+    "http://localhost:5173",              # for local dev
+    "https://vibbly-frontend.vercel.app"  # your production frontend
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,            # allow these origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],              # allow all HTTP methods
+    allow_headers=["*"],              # allow all headers
 )
 
 app.include_router(router)
+
+# existing code…
+
 
 @app.get("/")
 def read_root():
