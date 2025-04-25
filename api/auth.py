@@ -1,19 +1,14 @@
-import os
+iimport os
 import hmac
 import hashlib
 from fastapi import HTTPException
 
-# ✅ Load BOT_TOKEN from environment variable
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-
 if not BOT_TOKEN:
-    print("❌ BOT_TOKEN is missing!")
     raise RuntimeError("BOT_TOKEN environment variable is not set!")
-else:
-    print("✅ BOT_TOKEN loaded successfully")
 
-# ✅ Derive the secret key from the bot token
 SECRET_KEY = hashlib.sha256(BOT_TOKEN.encode()).digest()
+
 
 def check_telegram_auth(init_data: str) -> dict:
     """
