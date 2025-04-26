@@ -1,37 +1,48 @@
 import os
 import hmac
 import hashlib
-from urllib.parse import unquote
+import json
+from urllib.parse import parse_qsl, unquote
 from fastapi import HTTPException
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN not set in environment!")
+    raise RuntimeError("BOT_TOKEN not set!")
 
 SECRET_KEY = hashlib.sha256(BOT_TOKEN.encode()).digest()
 
 def check_telegram_auth(init_data: str) -> dict:
+    """
+    Correct Telegram initData validation.
+    """
     try:
-        init_data = unquote(init_data)
-        pairs = [s.split("=", 1) for s in init_data.split("&")]
-        data = {}
+        # 1. Parse initData correctly
+        parsed_data = dict(parse_qsl(init_data, strict_parsing=True))
+        received_hash = parsed_data.pop("hash", None)
 
-        for key, value in pairs:
-            data[key] = value
-
-        hash_value = data.pop('hash', None)
-        if not hash_value:
+        if not received_hash:
             raise HTTPException(status_code=400, detail="Missing hash")
 
-        check_list = [f"{k}={v}" for k, v in sorted(data.items())]
+        # 2. Sort and prepare the check string
+        check_list = [f"{k}={v}" for k, v in sorted(parsed_data.items())]
         check_string = "\n".join(check_list)
 
-        computed_hash = hmac.new(SECRET_KEY, check_string.encode(), hashlib.sha256).hexdigest()
+        # 3. HMAC-SHA256 signature
+        computed_hash = hmac.new(
+            SECRET_KEY,
+            msg=check_string.encode(),
+            digestmod=hashlib.sha256
+        ).hexdigest()
 
-        if computed_hash != hash_value:
+        if computed_hash != received_hash:
             raise HTTPException(status_code=400, detail="Invalid hash")
 
-        return data
+        # 4. Return user data
+        user_json = parsed_data.get("user")
+        if user_json:
+            return json.loads(user_json)
+
+        return parsed_data
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Hash validation error: {str(e)}")
