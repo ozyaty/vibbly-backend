@@ -4,20 +4,17 @@ from .auth import check_telegram_auth
 
 router = APIRouter()
 
-# In-memory users store (for now—replace with a real DB later)
 USERS = {}
 
-@router.get("/auth")
-async def authenticate_user(request: Request):
-    init_data = request.query_params.get("initData")
-    if not init_data:
-        return {"success": False, "error": "Missing initData"}
+class InitData(BaseModel):
+    initData: str
+
+@router.post("/auth")
+async def authenticate_user(data: InitData):
     try:
-        # Verify Telegram signature and parse user data
-        user_data = check_telegram_auth(init_data)
+        user_data = check_telegram_auth(data.initData)
         telegram_id = user_data["id"]
 
-        # Auto-register if new
         if telegram_id not in USERS:
             USERS[telegram_id] = {
                 "id": telegram_id,
@@ -25,11 +22,10 @@ async def authenticate_user(request: Request):
                 "username": user_data.get("username", "")
             }
 
-        # Return the stored user record
         return {"success": True, "user": USERS[telegram_id]}
-
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": f"400: Hash validation error: {str(e)}"}
+
 
 @router.get("/feed")
 async def get_feed():
