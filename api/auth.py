@@ -1,7 +1,8 @@
 import os
 import hmac
 import hashlib
-from urllib.parse import parse_qs, unquote_plus
+import json
+from urllib.parse import urlencode
 from fastapi import HTTPException
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -10,21 +11,28 @@ if not BOT_TOKEN:
 
 SECRET_KEY = hashlib.sha256(BOT_TOKEN.encode()).digest()
 
-def verify_telegram_auth(init_data: str) -> dict:
+def verify_telegram_auth(data: dict) -> dict:
+    """
+    Correct Telegram initData validation from dict.
+    """
     try:
-        # Parse initData into dictionary
-        parsed_qs = parse_qs(init_data, strict_parsing=True)
+        # 1. Prepare the check string correctly
+        check_list = []
+        for key in sorted(data.keys()):
+            if key != "hash":
+                value = data[key]
+                if isinstance(value, dict):
+                    value = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+                else:
+                    value = str(value)
+                check_list.append(f"{key}={value}")
+        check_string = "\n".join(check_list)
 
-        parsed_data = {k: v[0] for k, v in parsed_qs.items()}
-
-        received_hash = parsed_data.pop("hash", None)
+        received_hash = data.get("hash")
         if not received_hash:
             raise HTTPException(status_code=400, detail="Missing hash")
 
-        # Build the check string
-        check_list = [f"{k}={v}" for k, v in sorted(parsed_data.items())]
-        check_string = "\n".join(check_list)
-
+        # 2. HMAC-SHA256 signature
         computed_hash = hmac.new(
             SECRET_KEY,
             msg=check_string.encode(),
@@ -34,13 +42,8 @@ def verify_telegram_auth(init_data: str) -> dict:
         if computed_hash != received_hash:
             raise HTTPException(status_code=400, detail="Invalid hash")
 
-        # If user field exists (inside initData), it's JSON encoded
-        user_json = parsed_data.get("user")
-        if user_json:
-            import json
-            return json.loads(user_json)
-
-        return parsed_data
+        # 3. Return user object
+        return data.get("user", {})
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Hash validation error: {str(e)}")
