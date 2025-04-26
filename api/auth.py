@@ -1,6 +1,7 @@
 import os
 import hmac
 import hashlib
+import json
 from urllib.parse import parse_qsl
 from fastapi import HTTPException
 
@@ -12,21 +13,18 @@ SECRET_KEY = hashlib.sha256(BOT_TOKEN.encode()).digest()
 
 def verify_telegram_auth(init_data: str) -> dict:
     """
-    Correct Telegram initData validation.
+    Final Correct Telegram WebApp auth verification.
     """
     try:
-        # 1. Parse initData into key-value pairs
         parsed_data = dict(parse_qsl(init_data, strict_parsing=True))
         received_hash = parsed_data.pop("hash", None)
 
         if not received_hash:
             raise HTTPException(status_code=400, detail="Missing hash")
 
-        # 2. Build check_string exactly like Telegram expects
         check_list = [f"{k}={v}" for k, v in sorted(parsed_data.items())]
         check_string = "\n".join(check_list)
 
-        # 3. Calculate HMAC-SHA256
         computed_hash = hmac.new(
             SECRET_KEY,
             msg=check_string.encode(),
@@ -36,8 +34,13 @@ def verify_telegram_auth(init_data: str) -> dict:
         if computed_hash != received_hash:
             raise HTTPException(status_code=400, detail="Invalid hash")
 
-        # 4. If verified, return parsed fields (user is still string JSON inside!)
-        return parsed_data
+        # Parse the "user" field (which is a JSON string)
+        user_json = parsed_data.get("user")
+        if not user_json:
+            raise HTTPException(status_code=400, detail="User field missing")
+
+        user_data = json.loads(user_json)
+        return user_data
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Hash validation error: {str(e)}")
