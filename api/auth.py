@@ -2,7 +2,6 @@ import os
 import hmac
 import hashlib
 import json
-from urllib.parse import urlencode
 from fastapi import HTTPException
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -13,26 +12,26 @@ SECRET_KEY = hashlib.sha256(BOT_TOKEN.encode()).digest()
 
 def verify_telegram_auth(data: dict) -> dict:
     """
-    Correct Telegram initData validation from dict.
+    Validate Telegram initData (already parsed dict).
     """
     try:
-        # 1. Prepare the check string correctly
-        check_list = []
-        for key in sorted(data.keys()):
-            if key != "hash":
-                value = data[key]
-                if isinstance(value, dict):
-                    value = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
-                else:
-                    value = str(value)
-                check_list.append(f"{key}={value}")
-        check_string = "\n".join(check_list)
-
-        received_hash = data.get("hash")
+        received_hash = data.pop("hash", None)
         if not received_hash:
             raise HTTPException(status_code=400, detail="Missing hash")
 
-        # 2. HMAC-SHA256 signature
+        # Rebuild check_string properly
+        check_list = []
+        for key in sorted(data.keys()):
+            value = data[key]
+            if isinstance(value, dict):
+                # 👇 This is the crucial fix:
+                value = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+            else:
+                value = str(value)
+            check_list.append(f"{key}={value}")
+
+        check_string = "\n".join(check_list)
+
         computed_hash = hmac.new(
             SECRET_KEY,
             msg=check_string.encode(),
@@ -42,7 +41,6 @@ def verify_telegram_auth(data: dict) -> dict:
         if computed_hash != received_hash:
             raise HTTPException(status_code=400, detail="Invalid hash")
 
-        # 3. Return user object
         return data.get("user", {})
 
     except Exception as e:
