@@ -7,21 +7,16 @@ router = APIRouter()
 USERS = {}
 
 # ✅ Correct incoming body model
-class InitData(BaseModel):
+class InitDataModel(BaseModel):
     query_id: str
     user: dict
-    auth_date: int
+    auth_date: str
     hash: str
 
 @router.post("/auth")
-async def authenticate_user(data: InitData):
+async def authenticate_user(data: InitDataModel):
     try:
-        user_data = verify_telegram_auth({
-            "query_id": data.query_id,
-            "user": data.user,
-            "auth_date": data.auth_date,
-            "hash": data.hash
-        })
+        user_data = verify_telegram_auth(data.dict())
         telegram_id = user_data["id"]
 
         if telegram_id not in USERS:
