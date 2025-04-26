@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from pydantic import BaseModel
-from .auth import check_telegram_auth
+from .auth import verify_telegram_auth
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ class InitData(BaseModel):
 @router.post("/auth")
 async def authenticate_user(data: InitData):
     try:
-        user_data = check_telegram_auth(data.initData)
+        user_data = verify_telegram_auth(data.initData)
         telegram_id = user_data["id"]
 
         if telegram_id not in USERS:
@@ -26,13 +26,10 @@ async def authenticate_user(data: InitData):
     except Exception as e:
         return {"success": False, "error": f"400: Hash validation error: {str(e)}"}
 
-
 @router.get("/feed")
 async def get_feed():
-    # Placeholder feed: replace with real posts later
     return {"feed": []}
 
-# (Optional) Keep your manual register endpoint if you like:
 class User(BaseModel):
     username: str
     password: str
