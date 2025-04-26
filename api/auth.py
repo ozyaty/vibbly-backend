@@ -11,7 +11,7 @@ if not BOT_TOKEN:
 
 SECRET_KEY = hashlib.sha256(BOT_TOKEN.encode()).digest()
 
-def check_telegram_auth(init_data: str) -> dict:
+def verify_telegram_auth(init_data: str) -> dict:
     """
     Correct Telegram initData validation.
     """
