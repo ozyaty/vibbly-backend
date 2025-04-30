@@ -6,17 +6,16 @@ router = APIRouter()
 
 USERS = {}
 
-# ✅ Correct incoming body model
-class InitDataModel(BaseModel):
+class TelegramInit(BaseModel):
     query_id: str
     user: dict
     auth_date: str
     hash: str
 
 @router.post("/auth")
-async def authenticate_user(data: InitDataModel):
+async def authenticate_user(data: TelegramInit):
     try:
-        user_data = verify_telegram_auth(data.dict())
+        user_data = verify_telegram_auth(data)
         telegram_id = user_data["id"]
 
         if telegram_id not in USERS:
@@ -28,17 +27,4 @@ async def authenticate_user(data: InitDataModel):
 
         return {"success": True, "user": USERS[telegram_id]}
     except Exception as e:
-        return {"success": False, "error": f"400: Hash validation error: {str(e)}"}
-
-@router.get("/feed")
-async def get_feed():
-    return {"feed": []}
-
-class User(BaseModel):
-    username: str
-    password: str
-
-@router.post("/register")
-def register(user: User):
-    print(f"Received registration for: {user.username}")
-    return {"message": f"User {user.username} registered successfully"}
+        return {"success": False, "error": f"Hash validation error: {str(e)}"}
