@@ -1,21 +1,17 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from .auth import verify_telegram_auth
 
-router = APIRouter()
-
-USERS = {}
-
-class TelegramInit(BaseModel):
+class TelegramAuth(BaseModel):
     query_id: str
-    user: dict
+    user: str  # stringified user object
     auth_date: str
     hash: str
 
 @router.post("/auth")
-async def authenticate_user(data: TelegramInit):
+async def authenticate_user(data: TelegramAuth):
     try:
-        user_data = verify_telegram_auth(data)
+        payload = data.dict()
+        user_data = verify_telegram_auth(payload)
         telegram_id = user_data["id"]
 
         if telegram_id not in USERS:
@@ -27,4 +23,5 @@ async def authenticate_user(data: TelegramInit):
 
         return {"success": True, "user": USERS[telegram_id]}
     except Exception as e:
-        return {"success": False, "error": f"Hash validation error: {str(e)}"}
+        return {"success": False, "error": f"400: Hash validation error: {str(e)}"}
+
